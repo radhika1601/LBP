@@ -29,7 +29,7 @@ def feistel_block(plaintext: bytearray, key: bytearray):
     left_array = left_array.zfill(len(left_array) + 4-len(left_array)%5)
     right_array = right_array.zfill(len(right_array) + 4-len(right_array)%5)
     ciphertext_block = left_array + right_array
-    return ciphertext_block
+    return bytearray(ciphertext_block, encoding='utf-8')
 
 def feistel_system_3(plaintext, key):
     

@@ -15,7 +15,7 @@ def sbox(state: int):
         0x3: 0xB,
         0x4: 0x9,
         0x5: 0x0, 
-        0x6: 0xA,
+        0x6: 0xA,    
         0x7: 0xD,
         0x8: 0x3,
         0x9: 0xE,
@@ -30,7 +30,7 @@ def sbox(state: int):
 
 
 def sbox_feistel_block(plaintext: bytearray, key: bytearray):
-    # print(f'PT: {plaintext}')
+
     left_array = plaintext[4:8]
     right_array = plaintext[0:4]
     left = int(left_array, 2)
@@ -40,7 +40,7 @@ def sbox_feistel_block(plaintext: bytearray, key: bytearray):
     round_keys.append(((key&0xf0)>>4) ^ ((key&0xf00)>>8))
     round_keys.append(key&0xf ^ ((key&0xf0)>>4))
     round_keys.append(key&0xf ^ ((key&0xf00)>>8))
-    # print(round_keys)
+
     for i in range(NUM_ROUNDS):
         left_new = right
         right = left^round_keys[i]
@@ -50,13 +50,10 @@ def sbox_feistel_block(plaintext: bytearray, key: bytearray):
             right = sbox(right)
     left_array = bin(left).strip('0b')
     right_array = bin(right).strip('0b')
-    print(f'LEFT: {left_array} RIGHT: {right_array}')
     left_array = left_array.zfill(len(left_array) + 4-len(left_array)%5)
     right_array = right_array.zfill(len(right_array) + 4-len(right_array)%5)
-    print('zfill vaala')
-    print(f'LEFT: {left_array} RIGHT: {right_array}')
     ciphertext_block = left_array + right_array
-    return ciphertext_block
+    return bytearray(ciphertext_block, encoding='utf-8')
 
 
 def sbox_feistel_system_3(plaintext, key):
@@ -67,6 +64,7 @@ def sbox_feistel_system_3(plaintext, key):
         ciphertext_block = sbox_feistel_block(plaintext_block, key)
         ciphertext += chr(int(ciphertext_block,2))
     print(repr(ciphertext))
+    return ciphertext
 
 def main():
 
