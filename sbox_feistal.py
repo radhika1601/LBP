@@ -48,17 +48,12 @@ def sbox_feistel_block(plaintext: int, key: int):
         if i < NUM_ROUNDS - 1:
             left = sbox(left)
             right = sbox(right)
-    # left_array = bin(left).lstrip('0b')
-    # right_array = bin(right).lstrip('0b')
-    # left_array = left_array.zfill(len(left_array) + 4-len(left_array)%5)
-    # right_array = right_array.zfill(len(right_array) + 4-len(right_array)%5)
-    ciphertext_block = left << 4 + right
+    ciphertext_block = (left << 4) + right
     return ciphertext_block
 
 
 def sbox_feistel_system_3(plaintext: int, key:int):
     ciphertext = -1
-    # ciphertext = bytearray()
     p = plaintext
     i = 0
     while True:
@@ -67,12 +62,6 @@ def sbox_feistel_system_3(plaintext: int, key:int):
         ciphertext += (ciphertext_block << (2**(8*i)))
         i += 1
     return ciphertext
-    # for i in range(int(len(plaintext)/8)):
-    #     plaintext_block = plaintext[8*i:8*i+8]
-    #     ciphertext_block = sbox_feistel_block(plaintext_block, key)
-    #     ciphertext += ciphertext_block
-    # print(repr(ciphertext))
-    # return ciphertext
 
 def main():
 
