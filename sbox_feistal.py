@@ -58,11 +58,11 @@ def sbox_feistel_block(plaintext: bytearray, key: bytearray):
 
 def sbox_feistel_system_3(plaintext, key):
     
-    ciphertext = ''
+    ciphertext = bytearray()
     for i in range(int(len(plaintext)/8)):
         plaintext_block = plaintext[8*i:8*i+8]
         ciphertext_block = sbox_feistel_block(plaintext_block, key)
-        ciphertext += chr(int(ciphertext_block,2))
+        ciphertext += ciphertext_block
     print(repr(ciphertext))
     return ciphertext
 
