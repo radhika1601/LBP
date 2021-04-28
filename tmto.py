@@ -2,9 +2,8 @@ from random import getrandbits
 from random import seed, sample
 from datetime import datetime
 import pickle
-from sbox_feistal import sbox_feistel_block
+from sbox_feistal import sbox_feistel_block, sbox_feistel_system_3
 
-import os
 
 m = 2**4 # m = N^(1/3)
 t = 2**4 # t = N^(1/3)
@@ -33,7 +32,7 @@ def compute_tmto_lists(plaintext):
         lists.append(l)
     return lists
 
-def get_key(plaintext:bytearray, ciphertext: bytearray):
+def get_key(plaintext:int, ciphertext: int):
     lists = compute_tmto_lists(plaintext)
 
     assert(len(lists) == 16)
@@ -64,15 +63,28 @@ def get_key(plaintext:bytearray, ciphertext: bytearray):
 if __name__=="__main__":
     time = datetime.now().timestamp()
     seed(int(time))
-    plaintext = b"i"
+
+    plaintext = bytes(input("Please enter your plaintext\n").rstrip('\n'), encoding='utf-8')
     plaintext = int(plaintext.hex(), 16)
     key = getrandbits(12)
-    print(f'KEY: {bin(key)}')
-    ciphertext = sbox_feistel_block(plaintext, key)
-    key_found = get_key(plaintext, ciphertext)
-    if key_found ==  False:
-        print("Key not found")
-        exit()
+    original_plaintext = plaintext
+    print(f'KEY: {key}')
+    while plaintext != 0:
+        plaintext_block = plaintext%(2**8)
+        ciphertext_block = sbox_feistel_block(plaintext_block, key)   
+        key_found = get_key(plaintext_block, ciphertext_block)
+        if key_found !=  False:
+            ciphertext = sbox_feistel_system_3(original_plaintext, key)
+            final = sbox_feistel_system_3(original_plaintext, key_found)
+            if ciphertext == final:
+                break
+        plaintext = plaintext >> 8
+        if plaintext == 0:
+            print("Key not found")  
+            exit()
     print(f"KEY FOUND {key_found}")
-    final = sbox_feistel_block(plaintext, key_found)
+    ciphertext = sbox_feistel_system_3(original_plaintext, key)
+    final = sbox_feistel_system_3(original_plaintext, key_found)
+            
     assert( ciphertext == final )
+

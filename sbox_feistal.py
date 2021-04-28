@@ -31,8 +31,6 @@ def sbox(state: int):
 
 def sbox_feistel_block(plaintext: int, key: int):
 
-    # left_array = 
-    # right_array = 
     left = plaintext % (2**4)
     right = (plaintext >> 4) % (2**4)
     round_keys = list()
@@ -53,21 +51,19 @@ def sbox_feistel_block(plaintext: int, key: int):
 
 
 def sbox_feistel_system_3(plaintext: int, key:int):
-    ciphertext = -1
+    ciphertext = bytearray()
     p = plaintext
     i = 0
-    while True:
-        plaintext_block = plaintext%(2**8)
+    while p != 0:
+        plaintext_block = p%(2**8)
         ciphertext_block = sbox_feistel_block(plaintext_block, key)
-        ciphertext += (ciphertext_block << (2**(8*i)))
-        i += 1
+        ciphertext += bytearray ( bin(ciphertext_block).lstrip('0b').zfill(8), encoding='utf-8' )
+        p = p >> 8
     return ciphertext
 
 def main():
 
-    plaintext = bytes(input("Please enter your plaintext").rstrip('\n'), encoding='utf-8')
-    # plaintext = bin(int(plaintext.hex(), 16)).lstrip('0b')
-    # plaintext = plaintext.zfill(len(plaintext) + 8-len(plaintext)%9) # Now the plaintext is a string of 0's and 1's only
+    plaintext = bytes(input("Please enter your plaintext\n").rstrip('\n'), encoding='utf-8')
     plaintext = int(plaintext.hex(), 16)
     key = getrandbits(12)
     print(f'KEY: {key}')
