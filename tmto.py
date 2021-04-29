@@ -1,75 +1,90 @@
 from random import getrandbits 
-from random import seed
+from random import seed, sample
 from datetime import datetime
-
-from sbox_feistal import sbox_feistel_block
+import pickle
+from sbox_feistal import sbox_feistel_block, sbox_feistel_system_3
 
 
 m = 2**4 # m = N^(1/3)
 t = 2**4 # t = N^(1/3)
 
-def permute(j:int, x:bytearray):
-    # hj(x)
-    bin_j = bytearray(bin(j).strip('0b').zfill(4), encoding='utf-8')
-    y = bin_j + bin_j
-    y = int(y, 2)
-    return  bytearray( bin( int(x, 2)^y ).strip('0b').zfill(8), encoding='utf-8' )
+def permute(j:int, x:int):
+    y = (j << 4) + j
+    return  x^y
 
 def compute_tmto_lists(plaintext):
     lists = []
-    sp = []
-    for i in range(m):
-        sp.append(bytearray(bin(getrandbits(8)).strip('0b').zfill(8), encoding='utf-8'))
-    for l_num in range(t): 
-        bits_to_append = bytearray( bin(l_num).strip('0b').zfill(4), encoding='utf-8' )
+    sp = sample(range(0, 2**8), m)
+    for l_num in range(t):
+        num_to_append = (l_num << 8)
         matrix = list()
         for i in range(m):
             matrix.append([0 for _ in range(t)])
             for j in range(t):
                 if j == 0:
-                    matrix[i][j] = bits_to_append + permute(l_num, sp[j])
+                    matrix[i][j] = num_to_append + permute(l_num, sp[i])
                 else:
-                    matrix[i][j] = bits_to_append + permute(l_num, sbox_feistel_block(plaintext, int(matrix[i][j-1], 2)))
+                    matrix[i][j] = num_to_append + sbox_feistel_block(plaintext, matrix[i][j-1])
         l = {}
         for i in range(m):
-            l[int(matrix[i][0], 2)] = matrix[i][t-1]
+            assert matrix[i][0] not in l , f'{i}, {l_num}'
+            l[matrix[i][0]] = matrix[i][t-1]
         lists.append(l)
     return lists
 
-def get_key(plaintext:bytearray, ciphertext: bytearray):
+def get_key(plaintext:int, ciphertext: int):
     lists = compute_tmto_lists(plaintext)
+
+    assert(len(lists) == 16)
     for i in range(t):
-        bits_to_append = bytearray( bin(i).strip('0b').zfill(4), encoding='utf-8' )
-        for j in range(t):
-            c = bits_to_append + permute(j, ciphertext)
-            c_i = c
-            for x in range(i):
-                c_i = bits_to_append + permute(j, sbox_feistel_block(plaintext, int(c_i, 2)))
-            
-            for l in range(m):
-                for k, value in lists[j].items():
-                    if c_i == value:
-                        x_l0 = k
-                        key = bytearray( bin(x_l0).strip('0b').zfill(12), encoding='utf-8')
-                        for x in range(t-i-1):
-                            key = bits_to_append + permute(j, sbox_feistel_block(plaintext, int(key, 2)))
+        assert(len(lists[i]) == 16)
+    
+    for i in range(t):
+        num_to_append = (i << 8)
+        c = num_to_append + ciphertext
+        for column in range(1, t):
+            c_t = c
+            for x in range(t - 1 - column):
+                c_t = num_to_append + sbox_feistel_block(plaintext, c_t)
+            for k, value in lists[i].items():
+                if c_t == value:
+                    x_l0 = k
+                    key = x_l0
+                    for x in range( column - 1 ):
+                        key = num_to_append + sbox_feistel_block(plaintext, key)
+                    c_expected = num_to_append + sbox_feistel_block(plaintext, key)
+                    if c == c_expected:
                         return key
-    return False                
+                    else:
+                        # If collision occurs but it is not the right key
+                        continue
+    return False
 
 if __name__=="__main__":
     time = datetime.now().timestamp()
     seed(int(time))
-    plaintext = b"i"
-    plaintext = bin(int(plaintext.hex(), 16)).strip('0b')
-    plaintext = plaintext.zfill(len(plaintext) + 8-len(plaintext)%9) # Now the plaintext is a string of 0's and 1's only
+
+    plaintext = bytes(input("Please enter your plaintext\n").rstrip('\n'), encoding='utf-8')
+    plaintext = int(plaintext.hex(), 16)
     key = getrandbits(12)
-    print(f'KEY: {bin(key)}')
-    ciphertext = sbox_feistel_block(plaintext, key)
-    print(f"Original ciphertext {ciphertext}")
-    key_found = get_key(plaintext, ciphertext)
-    if key_found ==  False:
-        print("Key not found")
-        exit()
+    original_plaintext = plaintext
+    print(f'KEY: {key}')
+    while plaintext != 0:
+        plaintext_block = plaintext%(2**8)
+        ciphertext_block = sbox_feistel_block(plaintext_block, key)   
+        key_found = get_key(plaintext_block, ciphertext_block)
+        if key_found !=  False:
+            ciphertext = sbox_feistel_system_3(original_plaintext, key)
+            final = sbox_feistel_system_3(original_plaintext, key_found)
+            if ciphertext == final:
+                break
+        plaintext = plaintext >> 8
+        if plaintext == 0:
+            print("Key not found")  
+            exit()
     print(f"KEY FOUND {key_found}")
-    key_found = int(key_found, 2)
-    print(f"Final ciphertext {sbox_feistel_block(plaintext, key_found)}")
+    ciphertext = sbox_feistel_system_3(original_plaintext, key)
+    final = sbox_feistel_system_3(original_plaintext, key_found)
+            
+    assert( ciphertext == final )
+

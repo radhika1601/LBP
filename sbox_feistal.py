@@ -29,12 +29,10 @@ def sbox(state: int):
     return switcher.get(state)
 
 
-def sbox_feistel_block(plaintext: bytearray, key: bytearray):
+def sbox_feistel_block(plaintext: int, key: int):
 
-    left_array = plaintext[4:8]
-    right_array = plaintext[0:4]
-    left = int(left_array, 2)
-    right = int(right_array, 2)
+    left = plaintext % (2**4)
+    right = (plaintext >> 4) % (2**4)
     round_keys = list()
     
     round_keys.append(((key&0xf0)>>4) ^ ((key&0xf00)>>8))
@@ -48,29 +46,25 @@ def sbox_feistel_block(plaintext: bytearray, key: bytearray):
         if i < NUM_ROUNDS - 1:
             left = sbox(left)
             right = sbox(right)
-    left_array = bin(left).strip('0b')
-    right_array = bin(right).strip('0b')
-    left_array = left_array.zfill(len(left_array) + 4-len(left_array)%5)
-    right_array = right_array.zfill(len(right_array) + 4-len(right_array)%5)
-    ciphertext_block = left_array + right_array
-    return bytearray(ciphertext_block, encoding='utf-8')
+    ciphertext_block = (left << 4) + right
+    return ciphertext_block
 
 
-def sbox_feistel_system_3(plaintext, key):
-    
-    ciphertext = ''
-    for i in range(int(len(plaintext)/8)):
-        plaintext_block = plaintext[8*i:8*i+8]
+def sbox_feistel_system_3(plaintext: int, key:int):
+    ciphertext = bytearray()
+    p = plaintext
+    i = 0
+    while p != 0:
+        plaintext_block = p%(2**8)
         ciphertext_block = sbox_feistel_block(plaintext_block, key)
-        ciphertext += chr(int(ciphertext_block,2))
-    print(repr(ciphertext))
+        ciphertext += bytearray ( bin(ciphertext_block).lstrip('0b').zfill(8), encoding='utf-8' )
+        p = p >> 8
     return ciphertext
 
 def main():
 
-    plaintext = bytes(input("Please enter your plaintext").strip('\n'), encoding='utf-8')
-    plaintext = bin(int(plaintext.hex(), 16)).strip('0b')
-    plaintext = plaintext.zfill(len(plaintext) + 8-len(plaintext)%9) # Now the plaintext is a string of 0's and 1's only
+    plaintext = bytes(input("Please enter your plaintext\n").rstrip('\n'), encoding='utf-8')
+    plaintext = int(plaintext.hex(), 16)
     key = getrandbits(12)
     print(f'KEY: {key}')
     sbox_feistel_system_3(plaintext, key)
