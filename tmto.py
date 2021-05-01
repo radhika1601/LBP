@@ -1,16 +1,18 @@
-from random import getrandbits 
+from random import getrandbits
 from random import seed, sample
 from datetime import datetime
 import pickle
-from sbox_feistal import sbox_feistel_block, sbox_feistel_system_3
+from sbox_feistal import SboxFeistel
+
+sbox_feistel_system = SboxFeistel(2332)
+m = 2**4  # m = N^(1/3)
+t = 2**4  # t = N^(1/3)
 
 
-m = 2**4 # m = N^(1/3)
-t = 2**4 # t = N^(1/3)
-
-def permute(j:int, x:int):
+def permute(j: int, x: int):
     y = (j << 4) + j
-    return  x^y
+    return x ^ y
+
 
 def compute_tmto_lists(plaintext):
     lists = []
@@ -24,35 +26,42 @@ def compute_tmto_lists(plaintext):
                 if j == 0:
                     matrix[i][j] = num_to_append + permute(l_num, sp[i])
                 else:
-                    matrix[i][j] = num_to_append + sbox_feistel_block(plaintext, matrix[i][j-1])
+                    matrix[i][j] = num_to_append + \
+                        sbox_feistel_system.encrypt_block(
+                            plaintext, key=matrix[i][j-1])
         l = {}
         for i in range(m):
-            assert matrix[i][0] not in l , f'{i}, {l_num}'
+            assert matrix[i][0] not in l, f'{i}, {l_num}'
             l[matrix[i][0]] = matrix[i][t-1]
         lists.append(l)
     return lists
 
-def get_key(plaintext:int, ciphertext: int):
+
+def get_key_block(plaintext: int, ciphertext: int):
     lists = compute_tmto_lists(plaintext)
 
     assert(len(lists) == 16)
     for i in range(t):
         assert(len(lists[i]) == 16)
-    
+
     for i in range(t):
         num_to_append = (i << 8)
         c = num_to_append + ciphertext
         for column in range(1, t):
             c_t = c
             for x in range(t - 1 - column):
-                c_t = num_to_append + sbox_feistel_block(plaintext, c_t)
+                c_t = num_to_append + \
+                    sbox_feistel_system.encrypt_block(plaintext, key=c_t)
             for k, value in lists[i].items():
                 if c_t == value:
                     x_l0 = k
                     key = x_l0
-                    for x in range( column - 1 ):
-                        key = num_to_append + sbox_feistel_block(plaintext, key)
-                    c_expected = num_to_append + sbox_feistel_block(plaintext, key)
+                    for x in range(column - 1):
+                        key = num_to_append + \
+                            sbox_feistel_system.encrypt_block(
+                                plaintext, key=key)
+                    c_expected = num_to_append + \
+                        sbox_feistel_system.encrypt_block(plaintext, key=key)
                     if c == c_expected:
                         return key
                     else:
@@ -60,31 +69,63 @@ def get_key(plaintext:int, ciphertext: int):
                         continue
     return False
 
-if __name__=="__main__":
+
+def get_key(plaintext: int, ciphertext: int):
+    original_plaintext = plaintext
+    original_ciphertext = ciphertext
+    # print(original_plaintext, original_ciphertext)
+    while plaintext != 0:
+        plaintext_block = plaintext % (2**8)
+        ciphertext_block = ciphertext % (2**8)
+        key_found = get_key_block(plaintext_block, ciphertext_block)
+        if key_found != False:
+            final = sbox_feistel_system.encrypt(
+                original_plaintext, key=key_found)
+            # print(int(final, 2))
+            if original_ciphertext == int(final, 2):
+                break
+        plaintext = plaintext >> 8
+        ciphertext = ciphertext >> 8
+        if plaintext == 0:
+            return False
+
+    return key_found
+
+
+if __name__ == "__main__":
     time = datetime.now().timestamp()
     seed(int(time))
 
-    plaintext = bytes(input("Please enter your plaintext\n").rstrip('\n'), encoding='utf-8')
+    plaintext = bytes(
+        input("Please enter your plaintext\n").rstrip('\n'), encoding='utf-8')
     plaintext = int(plaintext.hex(), 16)
-    key = getrandbits(12)
+    key = 2332
     original_plaintext = plaintext
+    original_ciphertext = sbox_feistel_system.encrypt(
+        original_plaintext, key=key)
+    print(original_ciphertext)
+    ciphertext = int(original_ciphertext, 2)
+    print(ciphertext)
     print(f'KEY: {key}')
     while plaintext != 0:
-        plaintext_block = plaintext%(2**8)
-        ciphertext_block = sbox_feistel_block(plaintext_block, key)   
-        key_found = get_key(plaintext_block, ciphertext_block)
-        if key_found !=  False:
-            ciphertext = sbox_feistel_system_3(original_plaintext, key)
-            final = sbox_feistel_system_3(original_plaintext, key_found)
-            if ciphertext == final:
+        plaintext_block = plaintext % (2**8)
+        ciphertext_block_1 = sbox_feistel_system.encrypt_block(
+            plaintext_block, key=key)
+        ciphertext_block = ciphertext % (2**8)
+        assert ciphertext_block == ciphertext_block_1
+        key_found = get_key_block(plaintext_block, ciphertext_block)
+        if key_found != False:
+            final = sbox_feistel_system.encrypt(
+                original_plaintext, key=key_found)
+            if original_ciphertext == final:
                 break
         plaintext = plaintext >> 8
+        ciphertext = ciphertext >> 8
         if plaintext == 0:
-            print("Key not found")  
+            print("Key not found")
             exit()
     print(f"KEY FOUND {key_found}")
-    ciphertext = sbox_feistel_system_3(original_plaintext, key)
-    final = sbox_feistel_system_3(original_plaintext, key_found)
-            
-    assert( ciphertext == final )
+    ciphertext = sbox_feistel_system.encrypt(original_plaintext, key=key)
+    final = sbox_feistel_system.encrypt(original_plaintext, key=key_found)
 
+    assert(ciphertext == final)
