@@ -79,7 +79,7 @@ class SboxFeistel():
                 left = sbox_dec(left)
                 right = sbox_dec(right)
             left_new = right
-            right = left ^ round_keys[NUM_ROUNDS-i-1]
+            right = left ^ round_keys[NUM_ROUNDS-i-1] ^ right
             left = left_new
         plaintext_block = (left << 4) + right
         return plaintext_block
@@ -93,7 +93,7 @@ class SboxFeistel():
 
         for i in range(NUM_ROUNDS):
             left_new = right
-            right = left ^ round_keys[i]
+            right = left ^ round_keys[i] ^ right
             left = left_new
             if i < NUM_ROUNDS - 1:
                 left = sbox(left)
