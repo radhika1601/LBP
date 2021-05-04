@@ -18,8 +18,31 @@ if __name__ == "__main__":
     sbox_feistel_system = SboxFeistel(key=key)
     assert chosen_plaintext == int(
         sbox_feistel_system.decrypt(ciphertext_part), 2)
-    ciphertext = bytes(input(
-        "Please enter the ciphertext as hex\n").rstrip('\n'), encoding='utf-8')
-    ciphertext = int(ciphertext, 16)
-    p_expect = (sbox_feistel_system.decrypt(ciphertext))
-    print(binascii.unhexlify("%x" % (int(p_expect, 2))))
+
+    print(f"""
+-------------------------------------------------
+Cryptanalysis Complete. The final key is {key}
+-------------------------------------------------
+        """)
+
+    while True:
+
+        option = int(input("""
+Please choose an option.
+1. Decrypt a message with computed key
+2. Quit
+        """).strip('\n'), 10)
+
+        if option == 1:
+
+            ciphertext = bytes(input(
+                "Please enter the ciphertext as hex\n").rstrip('\n'), encoding='utf-8')
+            ciphertext = int(ciphertext, 16)
+            p_expect = (sbox_feistel_system.decrypt(ciphertext))
+            print(binascii.unhexlify("%x" % (int(p_expect, 2))))
+
+        elif option == 2:
+            exit()
+        else:
+            print("Invalid option")
+            continue
