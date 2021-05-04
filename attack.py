@@ -1,6 +1,7 @@
-from tmto import get_key
+from tmto import get_key, compute_tmto_lists
 from sbox_feistal import SboxFeistel
 import binascii
+import pickle
 
 # TODO: Store the final matrices in sorted way for binary search.
 
@@ -9,6 +10,17 @@ if __name__ == "__main__":
     chosen_plaintext = bytes(
         input("Please enter your chosen plaintext\n").rstrip('\n'), encoding='utf-8')
     chosen_plaintext = int(chosen_plaintext.hex(), 16)
+    # Precomutation phase begins here.
+    plaintext_precomputation = chosen_plaintext
+    i = 0
+    while plaintext_precomputation != 0:
+        plaintext_block = plaintext_precomputation % (2**8)
+        block_tmto_list = compute_tmto_lists(plaintext_block)
+        with open(f"block_{i}.pkl", 'wb') as f:
+            pickle.dump(block_tmto_list, f)
+        i += 1
+        plaintext_precomputation = ( plaintext_precomputation >> 8)
+
     ciphertext_part = bytes(input(
         "Please enter the corresponding ciphertext as hex\n").rstrip('\n'), encoding='utf-8')
     print(f'{ciphertext_part}')
