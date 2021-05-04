@@ -162,10 +162,12 @@ def main():
     plaintext = int(plaintext.hex(), 16)
     key = getrandbits(12)
     print(f'KEY: {key}')
-    sbox_feistel_system_3(plaintext, key)
+    sbox_feistal = SboxFeistel(key)
+    ciphertext = sbox_feistal.encrypt(plaintext)
+    print(binascii.unhexlify("%x" % (int(ciphertext, 2))))
 
 
 if __name__ == '__main__':
-    # main()
+    main()
     test_block()
     test_system()

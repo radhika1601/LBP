@@ -37,8 +37,9 @@ def compute_tmto_lists(plaintext):
     return lists
 
 
-def get_key_block(plaintext: int, ciphertext: int):
-    lists = compute_tmto_lists(plaintext)
+def get_key_block(plaintext: int, ciphertext: int, block_idx: int):
+    with open(f"block_{block_idx}.pkl", "rb") as f:
+        lists = pickle.load(f)
 
     assert(len(lists) == 16)
     for i in range(t):
@@ -74,10 +75,11 @@ def get_key(plaintext: int, ciphertext: int):
     original_plaintext = plaintext
     original_ciphertext = ciphertext
     # print(original_plaintext, original_ciphertext)
+    block_idx = 0
     while plaintext != 0:
         plaintext_block = plaintext % (2**8)
         ciphertext_block = ciphertext % (2**8)
-        key_found = get_key_block(plaintext_block, ciphertext_block)
+        key_found = get_key_block(plaintext_block, ciphertext_block, block_idx)
         if key_found != False:
             final = sbox_feistel_system.encrypt(
                 original_plaintext, key=key_found)
@@ -86,6 +88,7 @@ def get_key(plaintext: int, ciphertext: int):
                 break
         plaintext = plaintext >> 8
         ciphertext = ciphertext >> 8
+        block_idx += 1
         if plaintext == 0:
             return False
 
@@ -99,6 +102,18 @@ if __name__ == "__main__":
     plaintext = bytes(
         input("Please enter your plaintext\n").rstrip('\n'), encoding='utf-8')
     plaintext = int(plaintext.hex(), 16)
+
+    # Precomutation phase begins here.
+    plaintext_precomputation = plaintext
+    i = 0
+    while plaintext_precomputation != 0:
+        plaintext_block = plaintext_precomputation % (2**8)
+        block_tmto_list = compute_tmto_lists(plaintext_block)
+        with open(f"block_{i}.pkl", 'wb') as f:
+            pickle.dump(block_tmto_list, f)
+        i += 1
+        plaintext_precomputation = ( plaintext_precomputation >> 8)
+
     key = 2332
     original_plaintext = plaintext
     original_ciphertext = sbox_feistel_system.encrypt(
@@ -107,13 +122,14 @@ if __name__ == "__main__":
     ciphertext = int(original_ciphertext, 2)
     print(ciphertext)
     print(f'KEY: {key}')
+    block_idx = 0
     while plaintext != 0:
         plaintext_block = plaintext % (2**8)
         ciphertext_block_1 = sbox_feistel_system.encrypt_block(
             plaintext_block, key=key)
         ciphertext_block = ciphertext % (2**8)
         assert ciphertext_block == ciphertext_block_1
-        key_found = get_key_block(plaintext_block, ciphertext_block)
+        key_found = get_key_block(plaintext_block, ciphertext_block, block_idx)
         if key_found != False:
             final = sbox_feistel_system.encrypt(
                 original_plaintext, key=key_found)
@@ -121,6 +137,7 @@ if __name__ == "__main__":
                 break
         plaintext = plaintext >> 8
         ciphertext = ciphertext >> 8
+        block_idx += 1
         if plaintext == 0:
             print("Key not found")
             exit()

@@ -2,6 +2,8 @@ from tmto import get_key
 from sbox_feistal import SboxFeistel
 import binascii
 
+# TODO: Store the final matrices in sorted way for binary search.
+
 if __name__ == "__main__":
     print("This program is to do a chosen plaintext attack on the feistel structure in sbox_feistel.")
     chosen_plaintext = bytes(
